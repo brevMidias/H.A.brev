@@ -6,7 +6,7 @@
 ---
 
 ## Última atualização
-2026-07-12 — sessão: correção docs udocker→proot-distro, scripts reais puxados do celular, HACS instalado.
+2026-07-12 — sessão: docs udocker→proot-distro, scripts reais puxados do celular, HACS instalado+ativado, HA rodando, log de 175 MB resolvido.
 
 ---
 
@@ -66,23 +66,27 @@ rodam). Scripts reais estão na raiz: `setup-homeassistant.sh`, `start-homeassis
 - [x] SSH configurado no Termux (porta 8022, sshd via `sv-enable sshd`)
 - [x] Chave SSH gerada no PC (`C:\Users\Uanderson\.ssh\id_termux`)
 - [x] MCP `ssh-mcp` registrado no Claude Code
-- [x] HA instalado e funcional via proot-distro Ubuntu, dados em `~/hass-config/`
-      (atualmente **parado** — foi parado para instalar o HACS)
+- [x] HA **rodando** via proot-distro Ubuntu, dados em `~/hass-config/` (porta 8123)
 - [x] Sistema de memória criado (`memory/`, `PROJECT_STATUS.md`, regras no CLAUDE.md/AGENTS.md)
-- [x] **HACS instalado** em `~/hass-config/custom_components/hacs/` (release mais recente, com HA parado)
+- [x] **HACS instalado** (v2.0.5) em `~/hass-config/custom_components/hacs/`
+- [x] **HACS ativado e funcionando na UI** (autorizado via GitHub) — confirmado pelo usuário
 - [x] Repo sincronizado com a realidade: scripts proot puxados do celular; scripts
       udocker movidos p/ `legacy-udocker/`; desktop Linux p/ `termux-desktop/`
 - [x] Docs (`AGENTS.md`, `PROJECT_STATUS.md`) reescritas para proot-distro
+- [x] **Log gigante (175 MB) investigado e resolvido** — era loop de erro
+      `_accept_connection` (`OSError: Errno 22`) causado por Android congelando o
+      processo à noite (Doze) → socket vira inválido. Restart limpo resolveu; log truncado
 
 ---
 
 ## O que falta fazer 🔲
 
-### Fase 1 — Infraestrutura (quase concluída)
-- [ ] Reiniciar o HA (`bash ~/start-homeassistant.sh`) e **verificar HACS na UI**
-      (Configurações → Dispositivos e Serviços → HACS deve aparecer)
-- [ ] Investigar log gigante: `~/hass-config/home-assistant.log` estava com **~182 MB**
-      (algo está spammando). Ver o que se repete antes de truncar.
+### Fase 1 — Infraestrutura (CONCLUÍDA ✅)
+- [x] HA reiniciado, boot limpo, HACS ativado e funcionando na UI
+- [x] Log gigante investigado e resolvido (loop `_accept_connection` por Doze do Android)
+- [ ] **Prevenir recorrência do congelamento (Doze):** desativar otimização de bateria
+      do Termux nas configs do Android; considerar `termux-boot` p/ HA subir sozinho
+      após reboot. (É a causa raiz do log de 175 MB — sem isso, volta a acontecer.)
 - [ ] Confirmar `ssh-mcp` aparecendo no `claude mcp list` (registrado em escopo de
       projeto; SSH direto funciona, mas o MCP não listou nesta sessão)
 
@@ -103,7 +107,7 @@ rodam). Scripts reais estão na raiz: `setup-homeassistant.sh`, `start-homeassis
 
 ## O que falta testar 🧪
 
-- [ ] HACS visível e funcional na UI do HA (após restart)
+- [x] HACS visível e funcional na UI do HA — confirmado pelo usuário 2026-07-12
 - [ ] SSH ao Termux após reinicialização do celular (sshd sobe sozinho?)
 - [ ] HA sobe automaticamente após reboot do celular (termux-boot configurado?)
 - [ ] Wake-on-LAN pelo botão da UI do HA
