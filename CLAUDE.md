@@ -1,5 +1,25 @@
 # CLAUDE.md
 
+## OBRIGATÓRIO — leia antes de qualquer ação
+
+1. **[PROJECT_STATUS.md](PROJECT_STATUS.md)** — estado atual do projeto: o que foi
+   feito, o que falta, bugs, arquitetura, próximos passos. **Leia primeiro, sempre.**
+2. **[AGENTS.md](AGENTS.md)** — fonte de verdade técnica: scripts, integração Jarvis,
+   bugs conhecidos, regras de segurança.
+
+## OBRIGATÓRIO — ao final de cada sessão
+
+Antes de encerrar, atualize **[PROJECT_STATUS.md](PROJECT_STATUS.md)**:
+- Mova itens concluídos para ✅
+- Adicione novos itens pendentes
+- Registre bugs encontrados
+- Registre decisões tomadas
+
+Isso garante que a próxima sessão comece com contexto completo, sem o usuário
+precisar reexplicar o que foi feito.
+
+---
+
 Este projeto usa **[AGENTS.md](AGENTS.md) como fonte de verdade única**. Leia-o
 inteiro antes de qualquer mudança — ele descreve os scripts, a integração com o
 Jarvis, os bugs conhecidos e o roadmap.

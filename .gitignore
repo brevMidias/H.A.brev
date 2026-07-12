@@ -3,17 +3,24 @@
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 
-# Dados de runtime do Home Assistant e dos containers udocker (criados no aparelho)
+# Dados de runtime do Home Assistant (criados no aparelho) — nunca versionar
+hass-config/
+hass-venv/
 haconfig/
 data/
 container_data/
 .storage/
+home-assistant.log*
+*.db
+*.db-shm
+*.db-wal
 
 # Segredos genéricos
 *.env
 !*.env.example
-# source.env é script essencial (funções udocker), sem segredos — versionar
+# source.env é script essencial (funções udocker legadas), sem segredos — versionar
 !source.env
+!legacy-udocker/source.env
 secrets.yaml
 *.key
 

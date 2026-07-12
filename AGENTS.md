@@ -5,15 +5,52 @@
 
 ---
 
+## Acesso direto ao celular (Android/Termux) via SSH
+
+O celular que roda o Home Assistant tem SSH disponível e o MCP `ssh-mcp` já está
+configurado no C‍laude Code — o agente **pode e deve executar comandos no Termux
+diretamente**, sem pedir para o usuário rodar nada manualmente.
+
+| Parâmetro | Valor |
+|---|---|
+| Host | `192.168.0.4` |
+| Porta | `8022` |
+| Usuário | `u0_a258` |
+| Chave privada | `C:\Users\Uanderson\.ssh\id_termux` |
+| MCP registrado | `ssh-mcp` (stdio, via `npx -y ssh-mcp`) |
+
+**Regras para o agente:**
+
+- Sempre que o usuário pedir uma ação no celular/Termux/HA, execute via SSH — não
+  peça para o usuário rodar o comando.
+- Antes de qualquer comando destrutivo (resetar HA, apagar/recriar o container
+  Ubuntu, modificar `hass-config`), confirme com o usuário.
+- O diretório de dados do HA no Termux é `~/hass-config/`. **Nunca apague este
+  diretório** — contém usuário, onboarding, dispositivos e o HACS instalado.
+- O HA roda dentro de um container **proot-distro Ubuntu**, num venv em
+  `~/hass-venv`. Para rodar comandos dentro do Ubuntu:
+  `proot-distro login ubuntu -- <comando>`. Ex.: versão do HA →
+  `proot-distro login ubuntu -- ~/hass-venv/bin/hass --version`.
+- Start/stop do HA: `bash ~/start-homeassistant.sh` / `bash ~/stop-homeassistant.sh`.
+- O sshd pode ter reiniciado se o celular foi desligado — se a conexão falhar,
+  oriente o usuário a rodar `sshd` no Termux e tente novamente.
+
+---
+
 ## O que é este repositório
 
 Scripts de instalação/gerência do **Home Assistant rodando em um celular Android
-antigo** (via Termux + udocker), mais os roteiros para integrar esse HA ao
-assistente pessoal **Jarvis**.
+antigo** (via Termux + **proot-distro Ubuntu**), mais os roteiros para integrar esse
+HA ao assistente pessoal **Jarvis**.
 
 As correções (bugs conhecidos, timezone, wake-lock) são feitas **direto nos scripts
 deste diretório** — sem perder a configuração já feita no HA. O [README.md](README.md)
 ainda é o texto de instalação original e deve ser atualizado conforme as correções.
+
+> **Método de instalação (confirmado no celular em 2026-07-12):** proot-distro
+> Ubuntu + venv Python, **não** udocker. Os scripts udocker antigos foram movidos
+> para [legacy-udocker/](legacy-udocker/) — mantidos só como referência histórica,
+> não são o que roda. Ver seção "Os scripts deste repositório" abaixo.
 
 **Objetivo final:** Jarvis consegue ligar o PC (Wake-on-LAN), acionar relé e ler
 sensores do HA, através de um túnel WireGuard fixo entre a VPS (onde o Jarvis roda)
@@ -98,73 +135,53 @@ Prefira usar/estender a integração Python que já é testada.
 
 ## Os scripts deste repositório
 
-Todos rodam em **Termux** (Android) e usam **udocker** (Docker sem root) — as funções
-utilitárias ficam em [source.env](source.env), que os outros scripts dão `source`.
+Todos rodam em **Termux** (Android). O HA vive dentro de um **container proot-distro
+Ubuntu**, num venv Python (`~/hass-venv`). Estes são os scripts que rodam de fato no
+celular (puxados de lá em 2026-07-12):
 
 | Script | O que faz |
 |---|---|
-| [home-assistant-core.sh](home-assistant-core.sh) | Baixa a imagem `homeassistant/home-assistant:stable` e roda via udocker. Porta `8123`. |
-| [install_udocker.sh](install_udocker.sh) | Instala/prepara o udocker no Termux. |
-| [matter-server.sh](matter-server.sh) | Sobe o Python Matter Server (`ws://localhost:5580/ws`). |
-| [music-assistant.sh](music-assistant.sh) | Sobe o Music Assistant (container udocker — leia antes de mexer). |
-| [wyoming-microwake-word.sh](wyoming-microwake-word.sh) | Sobe o Wyoming microWakeWord (wake word por voz). |
-| [source.env](source.env) | Funções udocker (`udocker_check`, `udocker_create`, `udocker_run`, patches proot/qemu). Sourced pelos demais. |
+| [setup-homeassistant.sh](setup-homeassistant.sh) | Instalador completo: instala `proot-distro`, cria o Ubuntu, cria o venv `~/hass-venv`, instala o `homeassistant` via pip, aplica o patch de zeroconf (`ifaddr/_posix.py`) e gera os scripts start/stop. |
+| [start-homeassistant.sh](start-homeassistant.sh) | Pega `termux-wake-lock` e sobe o HA: `proot-distro login ubuntu -- ~/hass-venv/bin/hass -c ~/hass-config`. Porta `8123`. |
+| [stop-homeassistant.sh](stop-homeassistant.sh) | `pkill -f hass` + `termux-wake-unlock`. |
+| [install-hacs.sh](install-hacs.sh) | Baixa o `hass.zip` do release mais recente e extrai em `~/hass-config/custom_components/hacs/`. Rodar com o HA parado; reiniciar depois. |
 
-**Parâmetros importantes de [home-assistant-core.sh](home-assistant-core.sh):**
+**Caminhos-chave (não apague os de dados):**
 
-- `TZ="Asia/Seoul"` na linha 9 — **trocar para `America/Bahia`**.
-- `STORAGE_PATH="$(pwd)/haconfig"` (linha 12) — config do HA fica em **`./haconfig`**,
-  relativo ao diretório onde o script roda. **São os dados reais; não apague.**
-- `PORT` — default `8123` (só aceita 1024–65535).
-- Imagem: **HA Container** (`homeassistant/home-assistant:stable`), rodado como
-  `python3 -m homeassistant --config /config`.
+- **Config do HA:** `~/hass-config/` — usuário, onboarding, dispositivos, HACS. **Dados reais.**
+- **Venv Python:** `~/hass-venv/` — o binário do HA é `~/hass-venv/bin/hass`.
+- **Container:** Ubuntu do `proot-distro` (compartilha o filesystem do Termux — venv e
+  config ficam no home do Termux, acessíveis de dentro e de fora do Ubuntu).
+- **Porta:** `8123`. `configuration.yaml` fixa `http: server_host: 0.0.0.0` para aceitar
+  conexões da LAN.
+- **Timezone:** definido na configuração do HA (via UI/onboarding), não em env var de script.
 
-### ⚠️ Discrepância entre os scripts e o roteiro — VERIFIQUE antes de agir
+**Scripts de desktop Linux** (não são do HA — deixados em [termux-desktop/](termux-desktop/)):
+`termux-linux-setup.sh`, `start-linux.sh`, `stop-linux.sh`.
 
-O código dos scripts e o roteiro [proximos-passos-ha-android-jarvis.md](proximos-passos-ha-android-jarvis.md)
-descrevem **métodos de instalação diferentes**. Não assuma; confirme o que está
-rodando de fato no celular:
-
-| Aspecto | Scripts deste repo (real) | Roteiro `proximos-passos` |
-|---|---|---|
-| Runtime | **udocker** (imagem Docker do HA) | `proot-distro ubuntu` + venv |
-| Config | `./haconfig` | `~/hass-config` |
-| Ambiente Python | (dentro do container) | `~/hass-venv` |
-
-O fix de onboarding proposto no roteiro mexe em `.storage/onboarding` — esse arquivo
-existe nos dois métodos, mas **o caminho até ele muda** conforme o runtime. Antes de
-automatizar qualquer fix, descubra qual instalação está ativa e ajuste os caminhos.
+**Legado udocker** ([legacy-udocker/](legacy-udocker/)): `home-assistant-core.sh`,
+`install_udocker.sh`, `source.env`, `matter-server.sh`, `music-assistant.sh`,
+`wyoming-microwake-word.sh`. Era o plano original (rodar o HA via imagem Docker no
+udocker), mas **não foi o método que funcionou** — o celular roda proot-distro.
+Mantidos só como referência; não rode sem antes decidir migrar de método.
 
 ---
 
-## "Addons" = containers udocker irmãos (não add-ons de verdade)
+## "Addons" (integrações complementares)
 
-Esta instalação é **Home Assistant Container** (imagem `homeassistant/home-assistant:stable`),
-que **não tem o Supervisor**. Portanto **não existe a loja de Add-ons** do HA OS/Supervised.
+Esta instalação é **Home Assistant Core** (rodando de pip num venv), que **não tem o
+Supervisor**. Portanto **não existe a loja de Add-ons** do HA OS/Supervised — extensões
+entram como **integrações** (via HACS ou nativas), não como add-ons.
 
-O que aqui chamamos de "addon" é, na prática, **outro container udocker rodando ao lado**
-do HA — o mesmo padrão dos scripts que já existem neste repo:
+O HACS já está instalado em `~/hass-config/custom_components/hacs/`. Componentes extras
+(Matter Server, Music Assistant, Wyoming) rodariam como processos/containers irmãos no
+mesmo Android; como o proot-distro **não isola a rede**, o HA os alcança por
+`localhost:PORTA` (e é isso que também permite o Wake-on-LAN nativo alcançar a LAN).
 
-| "Addon" | Script | HA conecta via |
-|---|---|---|
-| Matter Server | [matter-server.sh](matter-server.sh) | integração Matter, `ws://localhost:5580/ws` |
-| Music Assistant | [music-assistant.sh](music-assistant.sh) | integração Music Assistant, `localhost:8095` |
-| Wyoming microWakeWord | [wyoming-microwake-word.sh](wyoming-microwake-word.sh) | Wyoming, `localhost:10400` |
-
-**Por que `localhost` funciona entre containers:** o udocker (baseado em proot) **não isola
-a rede** — todos os containers compartilham a pilha de rede do próprio Android. O HA alcança
-os outros containers por `localhost:PORTA`, e pacotes saem pela interface Wi-Fi real do
-celular (é o que também faz o Wake-on-LAN nativo alcançar a LAN).
-
-**Regras ao adicionar um novo "addon" (container):**
-- Criar um script no **mesmo padrão** dos existentes: `source source.env` → `udocker_check`
-  → `udocker_prune` → `udocker_create "$NOME" "$IMAGEM"` → `udocker_run -p PORTA:PORTA ...`.
-  Rodar em uma sessão Termux separada (ou `screen`), já que cada `udocker_run` bloqueia o terminal.
-- Escolher **porta livre**. Já em uso: HA `8123`, Matter `5580`, Music Assistant `8095`,
-  Wyoming `10400`.
-- Persistir dados em volume no host (`-v "$STORAGE_PATH:/data"`) pra não perder config na recriação.
-- No HA, **adicionar a integração manualmente por IP/porta** (`localhost:PORTA` ou o IP do
-  celular) — a auto-descoberta (mDNS) **não funciona** no udocker (bug zeroconf abaixo).
+**Regra ao adicionar integração:** **adicione manualmente por IP/porta** (`localhost:PORTA`
+ou o IP do celular) — a auto-descoberta (mDNS) **não funciona** neste ambiente (bug
+zeroconf abaixo). Portas de referência: HA `8123`, Matter `5580`, Music `8095`,
+Wyoming `10400`.
 
 ---
 
@@ -174,8 +191,10 @@ celular (é o que também faz o Wake-on-LAN nativo alcançar a LAN).
   Core/Container (sem Supervisor). Fix: injetar `"analytics"` e `"integration"` em
   `.storage/onboarding` após o primeiro boot (issues #126304, #165242 do home-assistant/core).
   Detalhes e trecho de código: [proximos-passos-ha-android-jarvis.md](proximos-passos-ha-android-jarvis.md).
-- **Zeroconf/SSDP** — `No adapter found for IP address fe80::` no ambiente udocker/proot
-  (rede emulada). **Sempre adicione integrações manualmente por IP**, nunca dependa de
+- **Zeroconf/SSDP** — `No adapter found for IP address fe80::` no ambiente proot
+  (rede emulada). O `setup-homeassistant.sh` já aplica um patch em
+  `~/hass-venv/lib/python3.*/site-packages/ifaddr/_posix.py` para contornar. Ainda
+  assim, **sempre adicione integrações manualmente por IP**, nunca dependa de
   auto-descoberta (mDNS).
 - **Termux morto pelo Android** — em alguns fabricantes (Xiaomi/MIUI, Samsung) mesmo com
   `termux-wake-lock`. Desativar otimização de bateria; considerar `termux-boot`.
@@ -187,7 +206,7 @@ celular (é o que também faz o Wake-on-LAN nativo alcançar a LAN).
 Dois documentos guiam o trabalho (leia o relevante antes de executar):
 
 - [.claude/setup-ha-android-jarvis.md](.claude/setup-ha-android-jarvis.md) — roteiro
-  completo: WireGuard (celular↔VPS) → Termux/udocker/HA → ESPHome (relé) → Jarvis↔HA.
+  completo: WireGuard (celular↔VPS) → Termux/proot-distro/HA → ESPHome (relé) → Jarvis↔HA.
 - [proximos-passos-ha-android-jarvis.md](proximos-passos-ha-android-jarvis.md) —
   **Fase 1:** correção dos scripts (timezone, fix de onboarding automático,
   `termux-wake-lock` no start, documentar path real). **Fase 2:** Wake-on-LAN **nativo**
@@ -201,16 +220,17 @@ então o IP público dinâmico do roteador de casa nunca precisa ser conhecido.
 
 ## Convenções e regras de segurança
 
-- **Nunca perca dados de configuração do HA.** `./haconfig` (ou `~/hass-config`)
-  contém usuário, onboarding e dispositivos. Ao trocar scripts, confirme que os
-  caminhos apontam pros mesmos dados **antes** de rodar.
+- **Nunca perca dados de configuração do HA.** `~/hass-config/` contém usuário,
+  onboarding, dispositivos e o HACS. Ao trocar scripts, confirme que os caminhos
+  apontam pros mesmos dados **antes** de rodar.
 - **Scripts são Bash de Termux** (`#!/data/data/com.termux/files/usr/bin/bash`).
   Mantenha compatibilidade POSIX/Termux; não introduza dependências que não existem
-  no Termux sem instalar via `pkg`/`pip`.
+  no Termux sem instalar via `pkg`/`pip`. Pacotes Python do HA são instalados no
+  venv **dentro do Ubuntu** (`proot-distro login ubuntu -- ~/hass-venv/bin/pip ...`).
 - **WOL só funciona na mesma sub-rede** (broadcast UDP não atravessa VLAN/sub-rede sem
   IP Helper no roteador) e só com o PC em soft-off (S5) com energia em standby.
-- **Ações destrutivas** (apagar containers, `haconfig`, resetar HA) exigem confirmação
-  explícita do usuário. Prefira alternativas não-destrutivas.
+- **Ações destrutivas** (recriar o container Ubuntu, apagar `hass-config`, resetar HA)
+  exigem confirmação explícita do usuário. Prefira alternativas não-destrutivas.
 - **Segredos** (tokens HA, chaves WireGuard, senhas OTA/API ESPHome) nunca vão pro
   git nem aparecem em respostas. Referencie por nome, não por valor.
 - Use as **ferramentas dedicadas** (leitura/edição/busca) em vez de `cat`/`sed`/`grep`
