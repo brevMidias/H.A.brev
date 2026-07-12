@@ -1,0 +1,26 @@
+# Segredos e config local do Claude Code — NUNCA versionar (contém tokens ao vivo)
+.claude/settings.json
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Dados de runtime do Home Assistant e dos containers udocker (criados no aparelho)
+haconfig/
+data/
+container_data/
+.storage/
+
+# Segredos genéricos
+*.env
+!*.env.example
+# source.env é script essencial (funções udocker), sem segredos — versionar
+!source.env
+secrets.yaml
+*.key
+
+# Node
+node_modules/
+
+# OS
+desktop.ini
+.DS_Store
+Thumbs.db
