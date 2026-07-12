@@ -66,7 +66,8 @@ rodam). Scripts reais estão na raiz: `setup-homeassistant.sh`, `start-homeassis
 - [x] SSH configurado no Termux (porta 8022, sshd via `sv-enable sshd`)
 - [x] Chave SSH gerada no PC (`C:\Users\Uanderson\.ssh\id_termux`)
 - [x] MCP `ssh-mcp` registrado no Claude Code
-- [x] HA rodando via proot-distro Ubuntu, dados em `~/hass-config/`
+- [x] HA instalado e funcional via proot-distro Ubuntu, dados em `~/hass-config/`
+      (atualmente **parado** — foi parado para instalar o HACS)
 - [x] Sistema de memória criado (`memory/`, `PROJECT_STATUS.md`, regras no CLAUDE.md/AGENTS.md)
 - [x] **HACS instalado** em `~/hass-config/custom_components/hacs/` (release mais recente, com HA parado)
 - [x] Repo sincronizado com a realidade: scripts proot puxados do celular; scripts
