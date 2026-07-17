@@ -145,6 +145,7 @@ celular (puxados de lá em 2026-07-12):
 | [start-homeassistant.sh](start-homeassistant.sh) | Pega `termux-wake-lock` e sobe o HA: `proot-distro login ubuntu -- ~/hass-venv/bin/hass -c ~/hass-config`. Porta `8123`. Inclui um **watchdog de log** que trunca `home-assistant.log` se passar de 500MB (ver bug do log gigante). |
 | [stop-homeassistant.sh](stop-homeassistant.sh) | `pkill -f hass` + `termux-wake-unlock`. |
 | [install-hacs.sh](install-hacs.sh) | Baixa o `hass.zip` do release mais recente e extrai em `~/hass-config/custom_components/hacs/`. Rodar com o HA parado; reiniciar depois. |
+| [termux-boot-autostart.sh](termux-boot-autostart.sh) | Script de auto-start no boot. Vai em `~/.termux/boot/boot-autostart.sh` no celular. Pega `termux-wake-lock`, sobe o `sshd` e o Home Assistant automaticamente quando o Android liga. **Só dispara se o app Termux:Boot estiver instalado** (ver seção "Auto-start no boot"). |
 
 **Caminhos-chave (não apague os de dados):**
 
@@ -158,6 +159,22 @@ celular (puxados de lá em 2026-07-12):
 
 **Scripts de desktop Linux** (não são do HA — deixados em [termux-desktop/](termux-desktop/)):
 `termux-linux-setup.sh`, `start-linux.sh`, `stop-linux.sh`.
+
+### Auto-start no boot (Termux:Boot)
+
+Nem o `sshd` nem o HA sobem sozinhos após um reboot do celular. Para automatizar:
+
+- O script [termux-boot-autostart.sh](termux-boot-autostart.sh) fica no celular em
+  `~/.termux/boot/boot-autostart.sh` (já instalado e testado em 2026-07-17). Ele pega
+  `termux-wake-lock`, sobe o `sshd` e dispara o `start-homeassistant.sh` (com guards
+  idempotentes: não duplica processos se já estiverem rodando). Gera log em
+  `~/boot-autostart.log`.
+- **Pré-requisito que só o usuário faz (não dá por SSH):** instalar o app **Termux:Boot**
+  pelo **F-Droid** (a versão da Play Store é obsoleta e não funciona), abrir o app uma vez
+  e **tirar Termux + Termux:Boot da otimização de bateria**. Sem o app instalado/ativo, a
+  pasta `~/.termux/boot/` existe mas nada é disparado no boot (foi o que aconteceu no
+  reboot de 2026-07-17: `sshd` não subiu).
+- Ao editar o script no Windows, normalize CRLF→LF (`sed -i 's/\r$//' ...`) senão o shebang quebra.
 
 **Legado udocker** ([legacy-udocker/](legacy-udocker/)): `home-assistant-core.sh`,
 `install_udocker.sh`, `source.env`, `matter-server.sh`, `music-assistant.sh`,
