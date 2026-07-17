@@ -142,7 +142,7 @@ celular (puxados de lá em 2026-07-12):
 | Script | O que faz |
 |---|---|
 | [setup-homeassistant.sh](setup-homeassistant.sh) | Instalador completo: instala `proot-distro`, cria o Ubuntu, cria o venv `~/hass-venv`, instala o `homeassistant` via pip, aplica o patch de zeroconf (`ifaddr/_posix.py`) e gera os scripts start/stop. |
-| [start-homeassistant.sh](start-homeassistant.sh) | Pega `termux-wake-lock` e sobe o HA: `proot-distro login ubuntu -- ~/hass-venv/bin/hass -c ~/hass-config`. Porta `8123`. |
+| [start-homeassistant.sh](start-homeassistant.sh) | Pega `termux-wake-lock` e sobe o HA: `proot-distro login ubuntu -- ~/hass-venv/bin/hass -c ~/hass-config`. Porta `8123`. Inclui um **watchdog de log** que trunca `home-assistant.log` se passar de 500MB (ver bug do log gigante). |
 | [stop-homeassistant.sh](stop-homeassistant.sh) | `pkill -f hass` + `termux-wake-unlock`. |
 | [install-hacs.sh](install-hacs.sh) | Baixa o `hass.zip` do release mais recente e extrai em `~/hass-config/custom_components/hacs/`. Rodar com o HA parado; reiniciar depois. |
 
@@ -198,6 +198,26 @@ Wyoming `10400`.
   auto-descoberta (mDNS).
 - **Termux morto pelo Android** — em alguns fabricantes (Xiaomi/MIUI, Samsung) mesmo com
   `termux-wake-lock`. Desativar otimização de bateria; considerar `termux-boot`.
+- **`home-assistant.log` gigante lotando o armazenamento (RESOLVIDO 2026-07-17)** — o log
+  cresceu até **14GB** (disco do celular a 97%, 881MB livres) por causa de um **loop
+  infinito de erro** gravado ~15-20×/s desde 12/07:
+  `Error doing job: Exception in callback BaseSelectorEventLoop._accept_connection()` →
+  `OSError: [Errno 22] Invalid argument`. Causa raiz: um **socket de escuta TCP** entrou
+  em estado inválido no proot (rede emulada); o `epoll` sinalizava o socket como pronto,
+  mas todo `accept()` falhava com `EINVAL` e o HA nunca fechava o socket quebrado (girava
+  pra sempre, também torrando CPU/bateria). O único integração configurada que sobe um
+  servidor TCP local é o **`upnp`** (servidor de notificação de eventos do IGD/roteador).
+  Agrava: o HA **só rotaciona o `home-assistant.log` no restart** — de pé por dias, o
+  arquivo cresce sem limite. **Correção aplicada:**
+  1. Parar HA → zerar o log (`: > ~/hass-config/home-assistant.log`) → reclamou ~14GB.
+  2. Desabilitar a integração `upnp` (`disabled_by: "user"` em
+     `.storage/core.config_entries`; backup em `core.config_entries.bak`). UPnP/SSDP não
+     funcionam neste ambiente mesmo — adicione tudo por IP.
+  3. **Watchdog no [start-homeassistant.sh](start-homeassistant.sh):** processo em segundo
+     plano que trunca o log se passar de **500MB** (checa a cada 5 min). Rede de segurança
+     contra qualquer loop futuro — o disco nunca mais enche.
+  > Se o loop reaparecer mesmo com `upnp` desligado, investigar outros `create_server`
+  > (o próprio servidor HTTP `:8123`, ou re-bind de socket após troca de IP do WiFi).
 
 ---
 
